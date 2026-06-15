@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bilingual Ebook Maker | 双语电子书制作器</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Noto+Serif+SC:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="page-bg">
+        <div class="grain"></div>
+        <div class="floating-shapes">
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+            <div class="shape shape-4"></div>
+        </div>
+    </div>
+
+    <header>
+        <div class="logo-area">
+            <div class="book-icon">
+                <div class="book-page left"></div>
+                <div class="book-page right"></div>
+                <div class="book-spine"></div>
+            </div>
+            <h1>Bilingual Ebook Maker</h1>
+            <p class="subtitle">双语电子书制作器 · EN/CN</p>
+        </div>
+    </header>
+
+    <main>
+        <!-- Upload Section -->
+        <section id="upload-section" class="card">
+            <div class="card-header">
+                <span class="step-badge">1</span>
+                <h2>Upload Your Ebook / 上传电子书</h2>
+            </div>
+            <div class="upload-zone" id="drop-zone">
+                <div class="upload-icon">
+                    <svg viewBox="0 0 80 80" fill="none">
+                        <path d="M40 10 L40 50 M25 30 L40 15 L55 30" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M15 50 L15 65 Q15 70 20 70 L60 70 Q65 70 65 65 L65 50" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <p class="upload-text">Drag & drop your <strong>.epub</strong> or <strong>.pdf</strong> here</p>
+                <p class="upload-subtext">将 .epub 或 .pdf 文件拖放到此处</p>
+                <input type="file" id="file-input" accept=".epub,.pdf" hidden>
+                <button class="btn btn-outline" id="browse-btn">Browse Files / 浏览文件</button>
+            </div>
+            <div id="file-info" class="file-info hidden">
+                <div class="file-icon">📖</div>
+                <div class="file-details">
+                    <span class="file-name" id="file-name"></span>
+                    <span class="file-meta" id="file-meta"></span>
+                </div>
+                <button class="btn-icon" id="remove-file" title="Remove">✕</button>
+            </div>
+        </section>
+
+        <!-- Translate Section -->
+        <section id="translate-section" class="card hidden">
+            <div class="card-header">
+                <span class="step-badge">2</span>
+                <h2>Translate & Build / 翻译与制作</h2>
+            </div>
+            <div class="book-preview" id="book-preview">
+                <div class="preview-cover">
+                    <span class="preview-title" id="preview-title"></span>
+                    <span class="preview-author" id="preview-author"></span>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-large" id="start-btn">
+                <span class="btn-text">Start Translation / 开始翻译</span>
+                <span class="btn-icon-right">→</span>
+            </button>
+        </section>
+
+        <!-- Progress Section -->
+        <section id="progress-section" class="card hidden">
+            <div class="card-header">
+                <span class="step-badge pulse">3</span>
+                <h2>Translation Progress / 翻译进度</h2>
+            </div>
+            <div class="progress-container">
+                <div class="progress-ring-container">
+                    <svg class="progress-ring" viewBox="0 0 160 160">
+                        <circle class="progress-ring-bg" cx="80" cy="80" r="70"/>
+                        <circle class="progress-ring-fill" id="progress-circle" cx="80" cy="80" r="70"/>
+                    </svg>
+                    <div class="progress-percent" id="progress-percent">0%</div>
+                </div>
+                <div class="progress-details">
+                    <div class="progress-phase" id="progress-phase">Initializing...</div>
+                    <div class="progress-message" id="progress-message">Preparing...</div>
+                    <div class="progress-bar-wrapper">
+                        <div class="progress-bar" id="progress-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="progress-steps">
+                <div class="step" id="step-parse">
+                    <div class="step-dot"></div>
+                    <span>Parsing / 解析</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-translate">
+                    <div class="step-dot"></div>
+                    <span>Translating / 翻译中</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-build">
+                    <div class="step-dot"></div>
+                    <span>Building / 制作中</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step-done">
+                    <div class="step-dot"></div>
+                    <span>Done / 完成</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Result Section -->
+        <section id="result-section" class="card hidden">
+            <div class="card-header">
+                <span class="step-badge done">✓</span>
+                <h2>Translation Complete / 翻译完成</h2>
+            </div>
+            <div class="result-content">
+                <div class="result-hero">
+                    <div class="success-icon">
+                        <svg viewBox="0 0 80 80" fill="none">
+                            <circle cx="40" cy="40" r="35" stroke="currentColor" stroke-width="3"/>
+                            <path d="M25 40 L35 50 L55 30" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3>Your bilingual ebook is ready!</h3>
+                    <p>您的双语电子书已制作完成！</p>
+                </div>
+                <div class="stats-grid" id="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-chapters">-</div>
+                        <div class="stat-label">Chapters / 章节</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-ielts">-</div>
+                        <div class="stat-label">IELTS Words / 雅思词汇</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="stat-unique">-</div>
+                        <div class="stat-label">Unique Words / 独立词汇</div>
+                    </div>
+                </div>
+                <div class="ielts-preview" id="ielts-preview">
+                    <h4>📚 Sample IELTS Vocabulary / 部分雅思词汇预览</h4>
+                    <div class="word-chips" id="word-chips"></div>
+                </div>
+                <button class="btn btn-primary btn-large" id="download-btn">
+                    <span class="btn-text">Download EPUB / 下载双语电子书</span>
+                    <span class="btn-icon-right">⬇</span>
+                </button>
+                <button class="btn btn-outline" id="restart-btn">Make Another / 制作另一本</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Bilingual Ebook Maker — Translate ebooks with IELTS vocabulary highlights</p>
+        <p>双语电子书制作器 — 自动翻译并标注雅思高频词汇</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
