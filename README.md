@@ -31,8 +31,8 @@
 
 ```bash
 # Pull and run
-docker pull [your-dockerhub-username]/bilingual-ebook-maker:latest
-docker run -p 8000:8000 -v ./uploads:/app/uploads -v ./outputs:/app/outputs [your-dockerhub-username]/bilingual-ebook-maker:latest
+docker pull getyourhub/bilingual-ebook-maker:latest
+docker run -p 8000:8000 -v ./uploads:/app/uploads -v ./outputs:/app/outputs getyourhub/bilingual-ebook-maker:latest
 
 # Or use docker-compose
 docker-compose up -d
@@ -44,7 +44,7 @@ Then open http://localhost:8000 in your browser.
 
 ```bash
 # Clone the repository
-git clone https://github.com/[your-username]/bilingual-ebook-maker.git
+git clone https://github.com/getyourhub/bilingual-ebook-maker.git
 cd bilingual-ebook-maker
 
 # Install dependencies
@@ -142,8 +142,8 @@ MIT License — feel free to use and modify.
 
 ```bash
 # 拉取并运行
-docker pull [your-dockerhub-username]/bilingual-ebook-maker:latest
-docker run -p 8000:8000 -v ./uploads:/app/uploads -v ./outputs:/app/outputs [your-dockerhub-username]/bilingual-ebook-maker:latest
+docker pull getyourhub/bilingual-ebook-maker:latest
+docker run -p 8000:8000 -v ./uploads:/app/uploads -v ./outputs:/app/outputs getyourhub/bilingual-ebook-maker:latest
 
 # 或使用 docker-compose
 docker-compose up -d
@@ -155,7 +155,7 @@ docker-compose up -d
 
 ```bash
 # 克隆仓库
-git clone https://github.com/[your-username]/bilingual-ebook-maker.git
+git clone https://github.com/getyourhub/bilingual-ebook-maker.git
 cd bilingual-ebook-maker
 
 # 安装依赖
