@@ -34,6 +34,10 @@
         mimo: [
             {id: "mimo-v2.5-pro", name: "MiMo V2.5 Pro"}
         ],
+        mimo_tokenplan: [
+            {id: "mimo-v2.5-pro", name: "MiMo V2.5 Pro"},
+            {id: "mimo-v2-flash", name: "MiMo V2 Flash"}
+        ],
         deepl: [],
         openrouter: [
             {id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet"},
@@ -54,8 +58,8 @@
 
     const PROVIDER_NEEDS_KEY = {
         google: false, deepl: true, gemini: true, claude: true,
-        deepseek: true, qwen: true, mimo: true, openrouter: true,
-        siliconflow: true, custom: true
+        deepseek: true, qwen: true, mimo: true, mimo_tokenplan: true,
+        openrouter: true, siliconflow: true, custom: true
     };
 
     // Elements
