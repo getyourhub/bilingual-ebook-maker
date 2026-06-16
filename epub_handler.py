@@ -1,6 +1,6 @@
 import os
 import re
-import html
+import html as html_lib
 from pathlib import Path
 from typing import List, Dict, Tuple, Optional
 
@@ -197,64 +197,38 @@ def build_bilingual_epub(
 
 
 def _build_chapter_html(orig: dict, trans: dict, num: int) -> str:
+    title = html_lib.escape(orig["title"])
+    translated_content = trans.get("translated", "")
+
+    body_parts = [f'<h1 class="chapter-title">{title}</h1>']
+
+    if translated_content:
+        body_parts.append(translated_content)
+    else:
+        paragraphs = orig["text"].split("\n")
+        for para in paragraphs:
+            if para.strip():
+                body_parts.append(f'<p>{html_lib.escape(para)}</p>')
+
     ielts_marks = trans.get("ielts_words", [])
-    ielts_set = set()
-    for w in ielts_marks:
-        ielts_set.add(w["word"].lower())
-
-    paragraphs = orig["text"].split("\n")
-    translated_paras = trans["translated"].split("\n") if trans["translated"] else []
-
-    body_parts = [f'<h1 class="chapter-title">{html.escape(orig["title"])}</h1>']
-
-    for j, para in enumerate(paragraphs):
-        if not para.strip():
-            continue
-
-        marked_para = _mark_ielts_in_html(html.escape(para), ielts_set, ielts_marks)
-        trans_para = html.escape(translated_paras[j]) if j < len(translated_paras) else ""
-
-        body_parts.append(f'''
-        <div class="bilingual-block">
-            <div class="original">{marked_para}</div>
-            <div class="translated">{trans_para}</div>
-        </div>
-        ''')
-
     if ielts_marks:
         words_html = ""
         for w in ielts_marks[:50]:
             words_html += f'''
             <div class="word-card">
-                <span class="word">{html.escape(w["word"])}</span>
-                <span class="phonetic">{html.escape(w.get("phonetic", ""))}</span>
-                <span class="pos">{html.escape(w.get("pos", ""))}</span>
-                <span class="meaning">{html.escape(w.get("meaning", ""))}</span>
+                <span class="word">{html_lib.escape(w["word"])}</span>
+                <span class="phonetic">{html_lib.escape(w.get("phonetic", ""))}</span>
+                <span class="pos">{html_lib.escape(w.get("pos", ""))}</span>
+                <span class="meaning">{html_lib.escape(w.get("meaning", ""))}</span>
             </div>'''
         body_parts.append(f'''
         <div class="ielts-section">
-            <h2>📚 IELTS Vocabulary in This Chapter</h2>
+            <h2>📚 IELTS Vocabulary in This Chapter / 本章雅思词汇</h2>
             <div class="word-grid">{words_html}</div>
         </div>
         ''')
 
     return "\n".join(body_parts)
-
-
-def _mark_ielts_in_html(text: str, ielts_set: set, ielts_list: list) -> str:
-    word_info = {w["word"].lower(): w for w in ielts_list}
-
-    def replacer(m):
-        word = m.group(0)
-        lower = word.lower().strip(".,!?;:\"'()[]{}")
-        if lower in ielts_set and lower in word_info:
-            info = word_info[lower]
-            return (f'<span class="ielts-word" title="'
-                    f'{html.escape(info.get("phonetic", ""))} | '
-                    f'{html.escape(info.get("meaning", ""))}">{word}</span>')
-        return word
-
-    return re.sub(r'\b[a-zA-Z]{3,}\b', replacer, text)
 
 
 def _build_ielts_page(chapters: list, stats: dict) -> str:
@@ -269,10 +243,10 @@ def _build_ielts_page(chapters: list, stats: dict) -> str:
     for w in sorted(all_words.values(), key=lambda x: x["word"].lower()):
         words_html += f'''
         <tr>
-            <td class="word">{html.escape(w["word"])}</td>
-            <td class="phonetic">{html.escape(w.get("phonetic", ""))}</td>
-            <td class="pos">{html.escape(w.get("pos", ""))}</td>
-            <td class="meaning">{html.escape(w.get("meaning", ""))}</td>
+            <td class="word">{html_lib.escape(w["word"])}</td>
+            <td class="phonetic">{html_lib.escape(w.get("phonetic", ""))}</td>
+            <td class="pos">{html_lib.escape(w.get("pos", ""))}</td>
+            <td class="meaning">{html_lib.escape(w.get("meaning", ""))}</td>
         </tr>'''
 
     return f'''
@@ -317,23 +291,24 @@ def _get_epub_css() -> str:
         text-align: center;
     }
 
-    .bilingual-block {
-        margin-bottom: 1.8em;
+    .para-pair {
+        margin-bottom: 1.5em;
+        padding: 0.8em;
         border-left: 3px solid #c8a96e;
-        padding-left: 1em;
+        background: #faf8f5;
+        border-radius: 0 6px 6px 0;
     }
 
-    .original {
+    .para-pair .orig {
         font-size: 1.05em;
         color: #2c2c2c;
         margin-bottom: 0.5em;
         line-height: 1.9;
     }
 
-    .translated {
+    .para-pair .trans {
         font-size: 0.95em;
         color: #5a6e82;
-        font-style: normal;
         line-height: 1.8;
         padding-left: 0.5em;
         border-left: 2px solid #d4d4d4;

@@ -118,8 +118,9 @@ async def run_translation(
                     provider_name=provider, api_key=api_key, model=model,
                     custom_url=custom_url, custom_model=custom_model
                 )
+                fallback_name = ""
             except Exception as e:
-                if fallback_provider and not used_fallback:
+                if fallback_provider:
                     fallback_prov = get_provider(fallback_provider)
                     fallback_name = fallback_prov.display_name if fallback_prov else fallback_provider
                     progress_mgr.update(

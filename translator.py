@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 from typing import List, Dict, Tuple, Optional
@@ -32,7 +33,6 @@ def load_ielts_words() -> Dict[str, dict]:
 
 
 def mark_ielts_words(text: str, ielts_words: Dict[str, dict]) -> Tuple[str, List[dict]]:
-    import re
     found = []
     seen = set()
 
@@ -73,14 +73,14 @@ class GoogleProvider(TranslationProvider):
     async def translate(self, text: str, api_key: str = "", model: str = "") -> str:
         from deep_translator import GoogleTranslator
         translator = GoogleTranslator(source='en', target='zh-CN')
-        chunks = split_text(text, 4500)
+        chunks = _split_text(text, 4500)
         results = []
         for chunk in chunks:
             try:
                 r = await asyncio.to_thread(translator.translate, chunk)
                 results.append(r or "")
             except Exception as e:
-                results.append(f"[Error] {chunk[:50]}...")
+                results.append(f"[翻译错误]")
             await asyncio.sleep(0.1)
         return "".join(results)
 
@@ -93,7 +93,7 @@ class DeepLProvider(TranslationProvider):
 
     async def translate(self, text: str, api_key: str = "", model: str = "") -> str:
         async with httpx.AsyncClient(timeout=60) as client:
-            chunks = split_text(text, 50000)
+            chunks = _split_text(text, 50000)
             results = []
             for chunk in chunks:
                 resp = await client.post(
@@ -122,51 +122,57 @@ class OpenAICompatibleProvider(TranslationProvider):
 
     async def translate(self, text: str, api_key: str = "", model: str = "") -> str:
         model = model or self.default_model
-        chunks = split_text(text, 6000)
+        chunks = _split_text(text, 4000)
         results = []
         async with httpx.AsyncClient(timeout=120) as client:
             for chunk in chunks:
-                try:
-                    resp = await client.post(
-                        f"{self.base_url}/chat/completions",
-                        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                        json={
-                            "model": model,
-                            "messages": [
-                                {"role": "system", "content": "You are a professional translator. Translate the following English text to Chinese (Simplified). Output ONLY the translation, no explanations."},
-                                {"role": "user", "content": chunk}
-                            ],
-                            "temperature": 0.3,
-                            "max_tokens": 8000
-                        }
-                    )
-                    data = resp.json()
-                    results.append(data["choices"][0]["message"]["content"])
-                except Exception as e:
-                    results.append(f"[Translation Error: {str(e)[:80]}]")
+                resp = await client.post(
+                    f"{self.base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": "You are a professional translator. Translate the following English text to Chinese (Simplified). Preserve paragraph breaks. Output ONLY the translation, no explanations."},
+                            {"role": "user", "content": chunk}
+                        ],
+                        "temperature": 0.3,
+                        "max_tokens": 8000
+                    }
+                )
+                data = resp.json()
+                results.append(data["choices"][0]["message"]["content"])
                 await asyncio.sleep(0.2)
         return "".join(results)
 
 
-def split_text(text: str, max_len: int) -> List[str]:
-    import re
+def _split_text(text: str, max_len: int) -> List[str]:
     if len(text) <= max_len:
         return [text]
     chunks = []
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    paragraphs = text.split("\n\n")
     current = ""
-    for sent in sentences:
-        if len(current) + len(sent) + 1 <= max_len:
-            current += (" " if current else "") + sent
+    for para in paragraphs:
+        if len(current) + len(para) + 2 <= max_len:
+            current += ("\n\n" if current else "") + para
         else:
             if current:
                 chunks.append(current)
-            if len(sent) > max_len:
-                sub = [sent[i:i+max_len] for i in range(0, len(sent), max_len)]
-                chunks.extend(sub[:-1])
-                current = sub[-1]
+            if len(para) > max_len:
+                sentences = re.split(r'(?<=[.!?])\s+', para)
+                sub_current = ""
+                for sent in sentences:
+                    if len(sub_current) + len(sent) + 1 <= max_len:
+                        sub_current += (" " if sub_current else "") + sent
+                    else:
+                        if sub_current:
+                            chunks.append(sub_current)
+                        sub_current = sent
+                if sub_current:
+                    current = sub_current
+                else:
+                    current = ""
             else:
-                current = sent
+                current = para
     if current:
         chunks.append(current)
     return chunks
@@ -180,7 +186,6 @@ def _register_providers():
     PROVIDERS["google"] = GoogleProvider()
     PROVIDERS["deepl"] = DeepLProvider()
 
-    # Gemini
     PROVIDERS["gemini"] = OpenAICompatibleProvider(
         name="gemini", display_name="Google Gemini",
         base_url="https://generativelanguage.googleapis.com/v1beta/openai",
@@ -192,7 +197,6 @@ def _register_providers():
         ]
     )
 
-    # Claude via Anthropic
     PROVIDERS["claude"] = OpenAICompatibleProvider(
         name="claude", display_name="Anthropic Claude",
         base_url="https://api.anthropic.com/v1",
@@ -203,7 +207,6 @@ def _register_providers():
         ]
     )
 
-    # DeepSeek
     PROVIDERS["deepseek"] = OpenAICompatibleProvider(
         name="deepseek", display_name="DeepSeek",
         base_url="https://api.deepseek.com/v1",
@@ -214,7 +217,6 @@ def _register_providers():
         ]
     )
 
-    # Qwen
     PROVIDERS["qwen"] = OpenAICompatibleProvider(
         name="qwen", display_name="Qwen (通义千问)",
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
@@ -227,17 +229,13 @@ def _register_providers():
         ]
     )
 
-    # MiMo
     PROVIDERS["mimo"] = OpenAICompatibleProvider(
         name="mimo", display_name="MiMo (小米)",
         base_url="https://api.mimo.ai/v1",
         default_model="mimo-v2.5-pro",
-        models=[
-            {"id": "mimo-v2.5-pro", "name": "MiMo V2.5 Pro"},
-        ]
+        models=[{"id": "mimo-v2.5-pro", "name": "MiMo V2.5 Pro"}]
     )
 
-    # MiMo Token Plan
     PROVIDERS["mimo_tokenplan"] = OpenAICompatibleProvider(
         name="mimo_tokenplan", display_name="MiMo Token Plan (小米积分)",
         base_url="https://api.xiaomimimo.com/v1",
@@ -248,7 +246,6 @@ def _register_providers():
         ]
     )
 
-    # OpenRouter
     PROVIDERS["openrouter"] = OpenAICompatibleProvider(
         name="openrouter", display_name="OpenRouter",
         base_url="https://openrouter.ai/api/v1",
@@ -263,7 +260,6 @@ def _register_providers():
         ]
     )
 
-    # SiliconFlow
     PROVIDERS["siliconflow"] = OpenAICompatibleProvider(
         name="siliconflow", display_name="SiliconFlow (硅基流动)",
         base_url="https://api.siliconflow.cn/v1",
@@ -276,12 +272,9 @@ def _register_providers():
         ]
     )
 
-    # Custom (user-defined)
     PROVIDERS["custom"] = OpenAICompatibleProvider(
         name="custom", display_name="Custom (自定义)",
-        base_url="",
-        default_model="",
-        models=[]
+        base_url="", default_model="", models=[]
     )
 
 
@@ -304,14 +297,23 @@ def get_all_providers() -> List[dict]:
     return result
 
 
-async def translate_chapter(
-    text: str, ielts_words: Dict[str, dict],
+def parse_paragraphs(text: str) -> List[str]:
+    """Split text into meaningful paragraphs for translation."""
+    paragraphs = re.split(r'\n\s*\n|\n', text)
+    result = []
+    for p in paragraphs:
+        p = p.strip()
+        if len(p) > 10:
+            result.append(p)
+    return result
+
+
+async def translate_paragraphs(
+    paragraphs: List[str],
     provider_name: str = "google", api_key: str = "", model: str = "",
     custom_url: str = "", custom_model: str = ""
-) -> Tuple[str, List[dict]]:
-    import re
-    marked_text, found_words = mark_ielts_words(text, ielts_words)
-
+) -> List[str]:
+    """Translate each paragraph individually."""
     provider = get_provider(provider_name)
     if not provider:
         raise ValueError(f"Unknown provider: {provider_name}")
@@ -322,5 +324,32 @@ async def translate_chapter(
             base_url=custom_url, default_model=custom_model or "gpt-4o-mini"
         )
 
-    translated = await provider.translate(text, api_key=api_key, model=model)
-    return translated, found_words
+    translated = []
+    for i, para in enumerate(paragraphs):
+        try:
+            result = await provider.translate(para, api_key=api_key, model=model)
+            translated.append(result)
+        except Exception as e:
+            translated.append(f"[翻译失败]")
+        await asyncio.sleep(0.1)
+
+    return translated
+
+
+async def translate_chapter(
+    text: str, ielts_words: Dict[str, dict],
+    provider_name: str = "google", api_key: str = "", model: str = "",
+    custom_url: str = "", custom_model: str = ""
+) -> Tuple[str, List[dict]]:
+    marked_text, found_words = mark_ielts_words(text, ielts_words)
+
+    paragraphs = parse_paragraphs(text)
+    translated_paras = await translate_paragraphs(
+        paragraphs, provider_name, api_key, model, custom_url, custom_model
+    )
+
+    bilingual_parts = []
+    for orig, trans in zip(paragraphs, translated_paras):
+        bilingual_parts.append(f'<div class="para-pair"><p class="orig">{orig}</p><p class="trans">{trans}</p></div>')
+
+    return "\n".join(bilingual_parts), found_words
