@@ -55,13 +55,27 @@
             {id: "Qwen/Qwen3-235B-A22B", name: "Qwen3 235B"},
             {id: "Pro/deepseek-ai/DeepSeek-V3", name: "DeepSeek V3 (Pro)"}
         ],
-        custom: []
+        custom: [],
+        ollama: [
+            {id: "qwen2.5:7b", name: "Qwen2.5 7B"},
+            {id: "qwen2.5:14b", name: "Qwen2.5 14B"},
+            {id: "qwen2.5:32b", name: "Qwen2.5 32B"},
+            {id: "llama3.1:8b", name: "Llama 3.1 8B"},
+            {id: "llama3.1:70b", name: "Llama 3.1 70B"},
+            {id: "deepseek-r1:7b", name: "DeepSeek R1 7B"},
+            {id: "deepseek-r1:14b", name: "DeepSeek R1 14B"},
+            {id: "deepseek-r1:32b", name: "DeepSeek R1 32B"},
+            {id: "gemma2:9b", name: "Gemma 2 9B"},
+            {id: "mistral:7b", name: "Mistral 7B"}
+        ],
+        local: []
     };
 
     const PROVIDER_NEEDS_KEY = {
         google: false, deepl: true, gemini: true, claude: true,
         deepseek: true, qwen: true, mimo: true, mimo_tokenplan: true,
-        openrouter: true, siliconflow: true, custom: true
+        openrouter: true, siliconflow: true, custom: true,
+        ollama: false, local: false
     };
 
     // Load saved settings
@@ -170,6 +184,7 @@
         const needsKey = PROVIDER_NEEDS_KEY[p];
         const models = PROVIDER_MODELS[p] || [];
         const isCustom = p === 'custom';
+        const isLocal = p === 'ollama' || p === 'local';
 
         const modelRow = $('#model-row');
         const modelSelect = $('#model-select');
@@ -177,28 +192,42 @@
         const customUrlRow = $('#custom-url-row');
         const customModelRow = $('#custom-model-row');
 
+        // Model select
         if (models.length > 0) {
             modelRow.classList.remove('hidden');
             modelSelect.innerHTML = models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-        } else if (isCustom) {
+        } else if (isCustom || p === 'local') {
             modelRow.classList.add('hidden');
         } else {
             modelRow.classList.add('hidden');
         }
 
-        if (needsKey) {
+        // API Key
+        if (needsKey && !isLocal) {
             keyRow.classList.remove('hidden');
         } else {
             keyRow.classList.add('hidden');
         }
 
-        if (isCustom) {
+        // Custom URL for local models
+        if (isCustom || isLocal) {
             customUrlRow.classList.remove('hidden');
-            customModelRow.classList.remove('hidden');
-            keyRow.classList.remove('hidden');
         } else {
             customUrlRow.classList.add('hidden');
+        }
+
+        // Custom model name
+        if (isCustom || p === 'local') {
+            customModelRow.classList.remove('hidden');
+        } else {
             customModelRow.classList.add('hidden');
+        }
+
+        // Set default URL for local providers
+        if (p === 'ollama' && !$('#custom-url').value) {
+            $('#custom-url').value = 'http://localhost:11434/v1';
+        } else if (p === 'local' && !$('#custom-url').value) {
+            $('#custom-url').value = 'http://localhost:1234/v1';
         }
     }
 
@@ -270,13 +299,19 @@
         const model = $('#model-select').value;
         const customUrl = $('#custom-url').value;
         const customModel = $('#custom-model').value;
+        const isLocal = p === 'ollama' || p === 'local';
 
-        if (PROVIDER_NEEDS_KEY[p] && !apiKey && p !== 'custom') {
+        // Validation
+        if (PROVIDER_NEEDS_KEY[p] && !isLocal && !apiKey && p !== 'custom') {
             alert('Please enter your API key\n请输入 API Key');
             return;
         }
-        if (p === 'custom' && !customUrl) {
+        if ((p === 'custom' || isLocal) && !customUrl) {
             alert('Please enter API Base URL\n请输入 API 地址');
+            return;
+        }
+        if (p === 'local' && !customModel) {
+            alert('Please enter model name\n请输入模型名称');
             return;
         }
 
@@ -286,6 +321,23 @@
         const settings = loadSettings();
         const fallbackProvider = settings.fallbackProvider || "";
 
+        // For local providers, use custom URL as the provider config
+        let finalProvider = p;
+        let finalApiKey = apiKey;
+        let finalModel = model;
+        let finalCustomUrl = customUrl;
+        let finalCustomModel = customModel;
+
+        if (p === 'ollama') {
+            finalProvider = 'custom';
+            finalCustomUrl = customUrl || 'http://localhost:11434/v1';
+            finalCustomModel = model || customModel || 'qwen2.5:7b';
+        } else if (p === 'local') {
+            finalProvider = 'custom';
+            finalCustomUrl = customUrl || 'http://localhost:1234/v1';
+            finalCustomModel = customModel;
+        }
+
         try {
             const res = await fetch('/api/translate', {
                 method: 'POST',
@@ -294,11 +346,11 @@
                     task_id: state.taskId,
                     filepath: state.filepath,
                     filename: state.filename,
-                    provider: p,
-                    api_key: apiKey,
-                    model: model,
-                    custom_url: customUrl,
-                    custom_model: customModel,
+                    provider: finalProvider,
+                    api_key: finalApiKey,
+                    model: finalModel,
+                    custom_url: finalCustomUrl,
+                    custom_model: finalCustomModel,
                     fallback_provider: fallbackProvider,
                     fallback_api_key: getProviderSettings(fallbackProvider).apiKey || "",
                     fallback_model: getProviderSettings(fallbackProvider).model || ""

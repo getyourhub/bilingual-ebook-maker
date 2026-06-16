@@ -277,6 +277,33 @@ def _register_providers():
         base_url="", default_model="", models=[]
     )
 
+    # Ollama (local)
+    PROVIDERS["ollama"] = OpenAICompatibleProvider(
+        name="ollama", display_name="Ollama (本地)",
+        base_url="http://localhost:11434/v1",
+        default_model="qwen2.5:7b",
+        models=[
+            {"id": "qwen2.5:7b", "name": "Qwen2.5 7B"},
+            {"id": "qwen2.5:14b", "name": "Qwen2.5 14B"},
+            {"id": "qwen2.5:32b", "name": "Qwen2.5 32B"},
+            {"id": "llama3.1:8b", "name": "Llama 3.1 8B"},
+            {"id": "llama3.1:70b", "name": "Llama 3.1 70B"},
+            {"id": "deepseek-r1:7b", "name": "DeepSeek R1 7B"},
+            {"id": "deepseek-r1:14b", "name": "DeepSeek R1 14B"},
+            {"id": "deepseek-r1:32b", "name": "DeepSeek R1 32B"},
+            {"id": "gemma2:9b", "name": "Gemma 2 9B"},
+            {"id": "mistral:7b", "name": "Mistral 7B"},
+        ]
+    )
+
+    # LM Studio / LocalAI (local)
+    PROVIDERS["local"] = OpenAICompatibleProvider(
+        name="local", display_name="Local (本地自定义)",
+        base_url="http://localhost:1234/v1",
+        default_model="",
+        models=[]
+    )
+
 
 _register_providers()
 
