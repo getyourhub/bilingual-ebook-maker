@@ -4,7 +4,6 @@ LABEL maintainer="Bilingual Ebook Maker"
 LABEL description="Translate ebooks and create bilingual EPUB with IELTS vocabulary highlights"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    calibre \
     curl \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
