@@ -36,7 +36,7 @@
         <section id="upload-section" class="card">
             <div class="card-header">
                 <span class="step-badge">1</span>
-                <h2>Upload Your Ebook / 上传电子书</h2>
+                <h2>Upload Ebook / 上传电子书</h2>
             </div>
             <div class="upload-zone" id="drop-zone">
                 <div class="upload-icon">
@@ -60,22 +60,100 @@
             </div>
         </section>
 
-        <!-- Translate Section -->
-        <section id="translate-section" class="card hidden">
+        <!-- Provider Section -->
+        <section id="provider-section" class="card hidden">
             <div class="card-header">
                 <span class="step-badge">2</span>
-                <h2>Translate & Build / 翻译与制作</h2>
+                <h2>Translation Engine / 翻译引擎</h2>
             </div>
-            <div class="book-preview" id="book-preview">
-                <div class="preview-cover">
-                    <span class="preview-title" id="preview-title"></span>
-                    <span class="preview-author" id="preview-author"></span>
+
+            <div class="provider-grid" id="provider-grid">
+                <div class="provider-card active" data-provider="google">
+                    <div class="provider-icon">G</div>
+                    <div class="provider-name">Google</div>
+                    <div class="provider-tag">Free</div>
+                </div>
+                <div class="provider-card" data-provider="gemini">
+                    <div class="provider-icon">✦</div>
+                    <div class="provider-name">Gemini</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="claude">
+                    <div class="provider-icon">C</div>
+                    <div class="provider-name">Claude</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="deepseek">
+                    <div class="provider-icon">DS</div>
+                    <div class="provider-name">DeepSeek</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="qwen">
+                    <div class="provider-icon">Q</div>
+                    <div class="provider-name">Qwen</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="mimo">
+                    <div class="provider-icon">M</div>
+                    <div class="provider-name">MiMo</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="deepl">
+                    <div class="provider-icon">DL</div>
+                    <div class="provider-name">DeepL</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="openrouter">
+                    <div class="provider-icon">OR</div>
+                    <div class="provider-name">OpenRouter</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="siliconflow">
+                    <div class="provider-icon">SF</div>
+                    <div class="provider-name">SiliconFlow</div>
+                    <div class="provider-tag">API Key</div>
+                </div>
+                <div class="provider-card" data-provider="custom">
+                    <div class="provider-icon">⚙</div>
+                    <div class="provider-name">Custom</div>
+                    <div class="provider-tag">自定义</div>
                 </div>
             </div>
-            <button class="btn btn-primary btn-large" id="start-btn">
-                <span class="btn-text">Start Translation / 开始翻译</span>
-                <span class="btn-icon-right">→</span>
-            </button>
+
+            <!-- Model Select -->
+            <div class="model-config" id="model-config">
+                <div class="config-row" id="model-row">
+                    <label>Model / 模型</label>
+                    <select id="model-select">
+                        <option value="">Default</option>
+                    </select>
+                </div>
+                <div class="config-row hidden" id="custom-url-row">
+                    <label>API Base URL</label>
+                    <input type="text" id="custom-url" placeholder="https://api.example.com/v1">
+                </div>
+                <div class="config-row hidden" id="custom-model-row">
+                    <label>Model Name / 模型名称</label>
+                    <input type="text" id="custom-model" placeholder="gpt-4o-mini">
+                </div>
+                <div class="config-row hidden" id="api-key-row">
+                    <label>API Key / 密钥</label>
+                    <div class="key-input-wrap">
+                        <input type="password" id="api-key" placeholder="sk-...">
+                        <button class="btn-icon-sm" id="toggle-key" title="Show/Hide">👁</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="translate-action">
+                <div class="book-preview-mini" id="book-preview-mini">
+                    <span class="preview-title-mini" id="preview-title-mini"></span>
+                </div>
+                <button class="btn btn-primary btn-large" id="start-btn">
+                    <span class="btn-text">Start Translation / 开始翻译</span>
+                    <span class="btn-icon-right">→</span>
+                </button>
+            </div>
         </section>
 
         <!-- Progress Section -->
@@ -101,25 +179,13 @@
                 </div>
             </div>
             <div class="progress-steps">
-                <div class="step" id="step-parse">
-                    <div class="step-dot"></div>
-                    <span>Parsing / 解析</span>
-                </div>
+                <div class="step" id="step-parse"><div class="step-dot"></div><span>Parsing / 解析</span></div>
                 <div class="step-line"></div>
-                <div class="step" id="step-translate">
-                    <div class="step-dot"></div>
-                    <span>Translating / 翻译中</span>
-                </div>
+                <div class="step" id="step-translate"><div class="step-dot"></div><span>Translating / 翻译中</span></div>
                 <div class="step-line"></div>
-                <div class="step" id="step-build">
-                    <div class="step-dot"></div>
-                    <span>Building / 制作中</span>
-                </div>
+                <div class="step" id="step-build"><div class="step-dot"></div><span>Building / 制作中</span></div>
                 <div class="step-line"></div>
-                <div class="step" id="step-done">
-                    <div class="step-dot"></div>
-                    <span>Done / 完成</span>
-                </div>
+                <div class="step" id="step-done"><div class="step-dot"></div><span>Done / 完成</span></div>
             </div>
         </section>
 
@@ -141,18 +207,9 @@
                     <p>您的双语电子书已制作完成！</p>
                 </div>
                 <div class="stats-grid" id="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-chapters">-</div>
-                        <div class="stat-label">Chapters / 章节</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-ielts">-</div>
-                        <div class="stat-label">IELTS Words / 雅思词汇</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="stat-unique">-</div>
-                        <div class="stat-label">Unique Words / 独立词汇</div>
-                    </div>
+                    <div class="stat-card"><div class="stat-value" id="stat-chapters">-</div><div class="stat-label">Chapters / 章节</div></div>
+                    <div class="stat-card"><div class="stat-value" id="stat-ielts">-</div><div class="stat-label">IELTS Words / 雅思词汇</div></div>
+                    <div class="stat-card"><div class="stat-value" id="stat-unique">-</div><div class="stat-label">Unique Words / 独立词汇</div></div>
                 </div>
                 <div class="ielts-preview" id="ielts-preview">
                     <h4>📚 Sample IELTS Vocabulary / 部分雅思词汇预览</h4>

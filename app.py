@@ -2,8 +2,6 @@ import os
 import json
 import uuid
 import asyncio
-import tempfile
-import shutil
 from pathlib import Path
 from datetime import datetime
 
@@ -12,10 +10,8 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from translator import translate_chapter, load_ielts_words, mark_ielts_words
-from epub_handler import (
-    parse_epub, parse_pdf, build_bilingual_epub, get_book_info
-)
+from translator import translate_chapter, load_ielts_words, get_all_providers, get_provider
+from epub_handler import parse_epub, parse_pdf, build_bilingual_epub, get_book_info
 from progress_manager import ProgressManager
 
 app = FastAPI(title="Bilingual Ebook Maker")
@@ -36,6 +32,11 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.get("/api/providers")
+async def list_providers():
+    return get_all_providers()
+
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...)):
     if not file.filename.lower().endswith((".epub", ".pdf")):
@@ -51,13 +52,7 @@ async def upload_file(file: UploadFile = File(...)):
         f.write(content)
 
     info = get_book_info(file_path)
-
-    return {
-        "task_id": task_id,
-        "filename": file.filename,
-        "filepath": str(file_path),
-        "book_info": info
-    }
+    return {"task_id": task_id, "filename": file.filename, "filepath": str(file_path), "book_info": info}
 
 
 @app.post("/api/translate")
@@ -66,17 +61,24 @@ async def start_translation(request: Request):
     task_id = data["task_id"]
     filepath = data["filepath"]
     filename = data["filename"]
+    provider = data.get("provider", "google")
+    api_key = data.get("api_key", "")
+    model = data.get("model", "")
+    custom_url = data.get("custom_url", "")
+    custom_model = data.get("custom_model", "")
 
     progress_mgr.init_task(task_id)
-
     asyncio.create_task(
-        run_translation(task_id, filepath, filename)
+        run_translation(task_id, filepath, filename, provider, api_key, model, custom_url, custom_model)
     )
-
     return {"task_id": task_id, "status": "started"}
 
 
-async def run_translation(task_id: str, filepath: str, filename: str):
+async def run_translation(
+    task_id: str, filepath: str, filename: str,
+    provider: str = "google", api_key: str = "", model: str = "",
+    custom_url: str = "", custom_model: str = ""
+):
     try:
         progress_mgr.update(task_id, "parsing", 0, "Parsing ebook structure...")
 
@@ -87,6 +89,10 @@ async def run_translation(task_id: str, filepath: str, filename: str):
 
         progress_mgr.update(task_id, "parsing", 100, "Parsing complete")
 
+        prov = get_provider(provider)
+        provider_name = prov.display_name if prov else provider
+        progress_mgr.update(task_id, "translating", 0, f"Using {provider_name}...")
+
         total = len(chapters)
         translated_chapters = []
         ielts_stats = {"total": 0, "words": []}
@@ -95,30 +101,26 @@ async def run_translation(task_id: str, filepath: str, filename: str):
             pct = int((i / total) * 100)
             progress_mgr.update(
                 task_id, "translating", pct,
-                f"Translating chapter {i+1}/{total}: {ch['title'][:40]}..."
+                f"[{provider_name}] Chapter {i+1}/{total}: {ch['title'][:35]}..."
             )
 
             translated_text, found_ielts = await translate_chapter(
-                ch["text"], ielts_words
+                ch["text"], ielts_words,
+                provider_name=provider, api_key=api_key, model=model,
+                custom_url=custom_url, custom_model=custom_model
             )
 
             ielts_stats["total"] += len(found_ielts)
             ielts_stats["words"].extend(found_ielts)
-
             translated_chapters.append({
-                "title": ch["title"],
-                "original": ch["text"],
-                "translated": translated_text,
-                "ielts_words": found_ielts
+                "title": ch["title"], "original": ch["text"],
+                "translated": translated_text, "ielts_words": found_ielts
             })
-
             await asyncio.sleep(0.05)
 
         progress_mgr.update(task_id, "building", 50, "Building bilingual EPUB...")
 
-        output_path = str(
-            OUTPUT_DIR / filename.rsplit(".", 1)[0] + "_bilingual.epub"
-        )
+        output_path = str(OUTPUT_DIR / (filename.rsplit(".", 1)[0] + "_bilingual.epub"))
         build_bilingual_epub(chapters, translated_chapters, metadata, output_path, ielts_stats)
 
         progress_mgr.update(task_id, "done", 100, "Complete!")
@@ -130,6 +132,7 @@ async def run_translation(task_id: str, filepath: str, filename: str):
             "output_path": output_path,
             "output_filename": os.path.basename(output_path),
             "original_filename": filename,
+            "provider": provider_name,
             "timestamp": datetime.now().isoformat(),
             "ielts_words_sample": ielts_stats["words"][:30]
         }

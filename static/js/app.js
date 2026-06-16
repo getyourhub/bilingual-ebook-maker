@@ -6,7 +6,56 @@
         taskId: null,
         filepath: null,
         filename: null,
+        provider: "google",
         ws: null
+    };
+
+    const PROVIDER_MODELS = {
+        google: [],
+        gemini: [
+            {id: "gemini-2.5-flash", name: "Gemini 2.5 Flash"},
+            {id: "gemini-2.5-pro", name: "Gemini 2.5 Pro"},
+            {id: "gemini-2.0-flash", name: "Gemini 2.0 Flash"}
+        ],
+        claude: [
+            {id: "claude-3-5-sonnet-20241022", name: "Claude 3.5 Sonnet"},
+            {id: "claude-3-5-haiku-20241022", name: "Claude 3.5 Haiku"}
+        ],
+        deepseek: [
+            {id: "deepseek-chat", name: "DeepSeek V3"},
+            {id: "deepseek-reasoner", name: "DeepSeek R1"}
+        ],
+        qwen: [
+            {id: "qwen-turbo", name: "Qwen Turbo"},
+            {id: "qwen-plus", name: "Qwen Plus"},
+            {id: "qwen-max", name: "Qwen Max"},
+            {id: "qwen3-235b-a22b", name: "Qwen3 235B"}
+        ],
+        mimo: [
+            {id: "mimo-v2.5-pro", name: "MiMo V2.5 Pro"}
+        ],
+        deepl: [],
+        openrouter: [
+            {id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet"},
+            {id: "anthropic/claude-3.5-haiku", name: "Claude 3.5 Haiku"},
+            {id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash"},
+            {id: "deepseek/deepseek-chat-v3", name: "DeepSeek V3"},
+            {id: "deepseek/deepseek-r1", name: "DeepSeek R1"},
+            {id: "qwen/qwen3-235b-a22b", name: "Qwen3 235B"}
+        ],
+        siliconflow: [
+            {id: "deepseek-ai/DeepSeek-V3", name: "DeepSeek V3"},
+            {id: "deepseek-ai/DeepSeek-R1", name: "DeepSeek R1"},
+            {id: "Qwen/Qwen3-235B-A22B", name: "Qwen3 235B"},
+            {id: "Pro/deepseek-ai/DeepSeek-V3", name: "DeepSeek V3 (Pro)"}
+        ],
+        custom: []
+    };
+
+    const PROVIDER_NEEDS_KEY = {
+        google: false, deepl: true, gemini: true, claude: true,
+        deepseek: true, qwen: true, mimo: true, openrouter: true,
+        siliconflow: true, custom: true
     };
 
     // Elements
@@ -18,45 +67,24 @@
     const fileMeta = $('#file-meta');
     const removeFile = $('#remove-file');
     const uploadSection = $('#upload-section');
-    const translateSection = $('#translate-section');
+    const providerSection = $('#provider-section');
     const progressSection = $('#progress-section');
     const resultSection = $('#result-section');
     const startBtn = $('#start-btn');
     const downloadBtn = $('#download-btn');
     const restartBtn = $('#restart-btn');
-    const previewTitle = $('#preview-title');
-    const previewAuthor = $('#preview-author');
 
-    // Drag & drop
+    // File upload
     ['dragenter', 'dragover'].forEach(e => {
-        dropZone.addEventListener(e, (ev) => {
-            ev.preventDefault();
-            dropZone.classList.add('dragover');
-        });
+        dropZone.addEventListener(e, (ev) => { ev.preventDefault(); dropZone.classList.add('dragover'); });
     });
-
     ['dragleave', 'drop'].forEach(e => {
-        dropZone.addEventListener(e, (ev) => {
-            ev.preventDefault();
-            dropZone.classList.remove('dragover');
-        });
+        dropZone.addEventListener(e, (ev) => { ev.preventDefault(); dropZone.classList.remove('dragover'); });
     });
-
-    dropZone.addEventListener('drop', (e) => {
-        const files = e.dataTransfer.files;
-        if (files.length) handleFile(files[0]);
-    });
-
+    dropZone.addEventListener('drop', (e) => { if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
     dropZone.addEventListener('click', () => fileInput.click());
-    browseBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        fileInput.click();
-    });
-
-    fileInput.addEventListener('change', () => {
-        if (fileInput.files.length) handleFile(fileInput.files[0]);
-    });
-
+    browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+    fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
     removeFile.addEventListener('click', resetAll);
 
     async function handleFile(file) {
@@ -64,18 +92,12 @@
             alert('Please select a .epub or .pdf file\n请选择 .epub 或 .pdf 文件');
             return;
         }
-
         const formData = new FormData();
         formData.append('file', file);
-
         try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
             const data = await res.json();
-
-            if (data.error) {
-                alert(data.error);
-                return;
-            }
+            if (data.error) { alert(data.error); return; }
 
             state.taskId = data.task_id;
             state.filepath = data.filepath;
@@ -83,22 +105,90 @@
 
             fileName.textContent = data.filename;
             fileMeta.textContent = `${data.book_info.type} · ${data.book_info.author}`;
-
             fileInfo.classList.remove('hidden');
             dropZone.classList.add('hidden');
 
-            previewTitle.textContent = data.book_info.title;
-            previewAuthor.textContent = data.book_info.author;
-
-            translateSection.classList.remove('hidden');
-            translateSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
+            $('#preview-title-mini').textContent = `${data.book_info.title} — ${data.book_info.author}`;
+            providerSection.classList.remove('hidden');
+            providerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         } catch (err) {
             alert('Upload failed: ' + err.message);
         }
     }
 
+    // Provider selection
+    $$('.provider-card').forEach(card => {
+        card.addEventListener('click', () => {
+            $$('.provider-card').forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            state.provider = card.dataset.provider;
+            updateProviderUI();
+        });
+    });
+
+    function updateProviderUI() {
+        const p = state.provider;
+        const needsKey = PROVIDER_NEEDS_KEY[p];
+        const models = PROVIDER_MODELS[p] || [];
+        const isCustom = p === 'custom';
+
+        // Model select
+        const modelRow = $('#model-row');
+        const modelSelect = $('#model-select');
+        const keyRow = $('#api-key-row');
+        const customUrlRow = $('#custom-url-row');
+        const customModelRow = $('#custom-model-row');
+
+        if (models.length > 0) {
+            modelRow.classList.remove('hidden');
+            modelSelect.innerHTML = models.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+        } else if (isCustom) {
+            modelRow.classList.add('hidden');
+        } else {
+            modelRow.classList.add('hidden');
+        }
+
+        // API Key
+        if (needsKey) {
+            keyRow.classList.remove('hidden');
+        } else {
+            keyRow.classList.add('hidden');
+        }
+
+        // Custom URL/Model
+        if (isCustom) {
+            customUrlRow.classList.remove('hidden');
+            customModelRow.classList.remove('hidden');
+            keyRow.classList.remove('hidden');
+        } else {
+            customUrlRow.classList.add('hidden');
+            customModelRow.classList.add('hidden');
+        }
+    }
+
+    // Toggle key visibility
+    $('#toggle-key').addEventListener('click', () => {
+        const input = $('#api-key');
+        input.type = input.type === 'password' ? 'text' : 'password';
+    });
+
+    // Start translation
     startBtn.addEventListener('click', async () => {
+        const p = state.provider;
+        const apiKey = $('#api-key').value;
+        const model = $('#model-select').value;
+        const customUrl = $('#custom-url').value;
+        const customModel = $('#custom-model').value;
+
+        if (PROVIDER_NEEDS_KEY[p] && !apiKey && p !== 'custom') {
+            alert('Please enter your API key\n请输入 API Key');
+            return;
+        }
+        if (p === 'custom' && !customUrl) {
+            alert('Please enter API Base URL\n请输入 API 地址');
+            return;
+        }
+
         startBtn.classList.add('loading');
         startBtn.querySelector('.btn-text').textContent = 'Starting... / 启动中...';
 
@@ -109,16 +199,19 @@
                 body: JSON.stringify({
                     task_id: state.taskId,
                     filepath: state.filepath,
-                    filename: state.filename
+                    filename: state.filename,
+                    provider: p,
+                    api_key: apiKey,
+                    model: model,
+                    custom_url: customUrl,
+                    custom_model: customModel
                 })
             });
             const data = await res.json();
 
             progressSection.classList.remove('hidden');
             progressSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
             connectProgress(state.taskId);
-
         } catch (err) {
             alert('Failed to start: ' + err.message);
             startBtn.classList.remove('loading');
@@ -127,26 +220,14 @@
 
     function connectProgress(taskId) {
         const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${protocol}//${location.host}/ws/progress/${taskId}`;
-
-        state.ws = new WebSocket(wsUrl);
-
+        state.ws = new WebSocket(`${protocol}//${location.host}/ws/progress/${taskId}`);
         state.ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
             updateProgress(data);
-
-            if (data.status === 'done') {
-                state.ws.close();
-                loadResult(taskId);
-            } else if (data.status === 'error') {
-                state.ws.close();
-                alert('Error: ' + data.message);
-            }
+            if (data.status === 'done') { state.ws.close(); loadResult(taskId); }
+            else if (data.status === 'error') { state.ws.close(); alert('Error: ' + data.message); }
         };
-
-        state.ws.onerror = () => {
-            pollProgress(taskId);
-        };
+        state.ws.onerror = () => pollProgress(taskId);
     }
 
     function pollProgress(taskId) {
@@ -155,15 +236,9 @@
                 const res = await fetch(`/api/progress/${taskId}`);
                 const data = await res.json();
                 updateProgress(data);
-
-                if (data.status === 'done') {
-                    clearInterval(interval);
-                    loadResult(taskId);
-                } else if (data.status === 'error') {
-                    clearInterval(interval);
-                    alert('Error: ' + data.message);
-                }
-            } catch (err) { /* retry */ }
+                if (data.status === 'done') { clearInterval(interval); loadResult(taskId); }
+                else if (data.status === 'error') { clearInterval(interval); alert('Error: ' + data.message); }
+            } catch (err) {}
         }, 500);
     }
 
@@ -172,18 +247,12 @@
         const phase = data.phase || 'init';
         const msg = data.message || '';
 
-        // Update percent text
         $('#progress-percent').textContent = pct + '%';
-
-        // Update progress ring
         const circle = $('#progress-circle');
-        const circumference = 2 * Math.PI * 70; // r=70
+        const circumference = 2 * Math.PI * 70;
         circle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
-
-        // Update bar
         $('#progress-bar').style.width = pct + '%';
 
-        // Update text
         const phaseLabels = {
             parsing: 'Parsing / 解析中',
             translating: 'Translating / 翻译中',
@@ -194,11 +263,9 @@
         $('#progress-phase').textContent = phaseLabels[phase] || phase;
         $('#progress-message').textContent = msg;
 
-        // Update step indicators
         const steps = ['parse', 'translate', 'build', 'done'];
         const phaseOrder = { parsing: 0, translating: 1, building: 2, done: 3, error: -1 };
         const currentIdx = phaseOrder[phase] ?? -1;
-
         steps.forEach((s, i) => {
             const el = $(`#step-${s}`);
             el.classList.remove('active', 'done');
@@ -208,49 +275,21 @@
     }
 
     async function loadResult(taskId) {
-        try {
-            const res = await fetch(`/api/progress/${taskId}`);
-            const data = await res.json();
-
-            // Fetch detailed result
-            const detailRes = await fetch(`/api/download/${taskId}`, { method: 'HEAD' });
-
-            // Show result section
-            setTimeout(() => {
-                progressSection.classList.add('hidden');
-                resultSection.classList.remove('hidden');
-                resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-                // We get stats from a separate call or reconstruct
-                loadStats(taskId);
-            }, 800);
-
-        } catch (err) {
-            console.error(err);
-        }
+        setTimeout(() => {
+            progressSection.classList.add('hidden');
+            resultSection.classList.remove('hidden');
+            resultSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            loadStats(taskId);
+        }, 800);
     }
 
     async function loadStats(taskId) {
-        // Poll once more to get full stats from progress manager
         try {
             const res = await fetch(`/api/progress/${taskId}`);
             const data = await res.json();
-
-            // Stats may be embedded after completion
-            if (data.result) {
-                renderStats(data.result);
-            } else {
-                // Placeholder stats
-                renderStats({
-                    total_chapters: '—',
-                    total_ielts_words: '—',
-                    unique_ielts_words: '—',
-                    ielts_words_sample: []
-                });
-            }
-        } catch (err) {
-            console.error(err);
-        }
+            if (data.result) renderStats(data.result);
+            else renderStats({ total_chapters: '—', total_ielts_words: '—', unique_ielts_words: '—', ielts_words_sample: [] });
+        } catch (err) {}
     }
 
     function renderStats(stats) {
@@ -260,70 +299,45 @@
 
         const chips = $('#word-chips');
         chips.innerHTML = '';
-        const sample = stats.ielts_words_sample || [];
-        sample.forEach(w => {
+        (stats.ielts_words_sample || []).forEach(w => {
             const chip = document.createElement('div');
             chip.className = 'word-chip';
             chip.innerHTML = `<span class="chip-word">${esc(w.word)}</span><span class="chip-meaning">${esc(w.meaning)}</span>`;
             chips.appendChild(chip);
         });
-
-        if (sample.length === 0) {
-            chips.innerHTML = '<span style="color:var(--text-dim);font-size:0.85rem">No IELTS words preview available</span>';
+        if (!stats.ielts_words_sample || stats.ielts_words_sample.length === 0) {
+            chips.innerHTML = '<span style="color:var(--text-dim);font-size:0.85rem">No IELTS words preview</span>';
         }
     }
 
-    downloadBtn.addEventListener('click', () => {
-        if (state.taskId) {
-            window.location.href = `/api/download/${state.taskId}`;
-        }
-    });
-
+    downloadBtn.addEventListener('click', () => { if (state.taskId) window.location.href = `/api/download/${state.taskId}`; });
     restartBtn.addEventListener('click', resetAll);
 
     function resetAll() {
-        state.taskId = null;
-        state.filepath = null;
-        state.filename = null;
+        state.taskId = null; state.filepath = null; state.filename = null;
         if (state.ws) state.ws.close();
-
         fileInput.value = '';
         fileInfo.classList.add('hidden');
         dropZone.classList.remove('hidden');
-        translateSection.classList.add('hidden');
+        providerSection.classList.add('hidden');
         progressSection.classList.add('hidden');
         resultSection.classList.add('hidden');
-
         startBtn.classList.remove('loading');
         startBtn.querySelector('.btn-text').textContent = 'Start Translation / 开始翻译';
-
-        // Reset progress visuals
         $('#progress-percent').textContent = '0%';
-        const circle = $('#progress-circle');
-        circle.style.strokeDashoffset = 2 * Math.PI * 70;
+        $('#progress-circle').style.strokeDashoffset = 2 * Math.PI * 70;
         $('#progress-bar').style.width = '0%';
-
         uploadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
-    function esc(s) {
-        const d = document.createElement('div');
-        d.textContent = s || '';
-        return d.innerHTML;
-    }
+    function esc(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
 
-    // Add SVG gradient definition for progress ring
+    // SVG gradient
     const svg = document.querySelector('.progress-ring');
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.innerHTML = `
-        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style="stop-color:#6c63ff"/>
-            <stop offset="100%" style="stop-color:#c8a96e"/>
-        </linearGradient>
-    `;
+    defs.innerHTML = `<linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#6c63ff"/><stop offset="100%" style="stop-color:#c8a96e"/></linearGradient>`;
     svg.prepend(defs);
+    $('#progress-circle').setAttribute('stroke', 'url(#progressGradient)');
 
-    // Update progress ring to use gradient
-    const circle = $('#progress-circle');
-    circle.setAttribute('stroke', 'url(#progressGradient)');
+    updateProviderUI();
 })();

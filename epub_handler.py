@@ -9,7 +9,8 @@ from ebooklib import epub
 from bs4 import BeautifulSoup
 
 
-def parse_epub(filepath: str) -> Tuple[List[dict], dict]:
+def parse_epub(filepath) -> Tuple[List[dict], dict]:
+    filepath = str(filepath)
     book = epub.read_epub(filepath)
 
     metadata = {
@@ -42,7 +43,8 @@ def parse_epub(filepath: str) -> Tuple[List[dict], dict]:
     return chapters, metadata
 
 
-def parse_pdf(filepath: str) -> Tuple[List[dict], dict]:
+def parse_pdf(filepath) -> Tuple[List[dict], dict]:
+    filepath = str(filepath)
     import pdfplumber
 
     metadata = {
@@ -109,7 +111,8 @@ def _get_meta(book, ns, name):
     return None
 
 
-def get_book_info(filepath: str) -> dict:
+def get_book_info(filepath) -> dict:
+    filepath = str(filepath)
     try:
         if filepath.lower().endswith(".epub"):
             book = epub.read_epub(filepath)
