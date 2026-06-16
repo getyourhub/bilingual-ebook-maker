@@ -66,10 +66,16 @@ async def start_translation(request: Request):
     model = data.get("model", "")
     custom_url = data.get("custom_url", "")
     custom_model = data.get("custom_model", "")
+    fallback_provider = data.get("fallback_provider", "")
+    fallback_api_key = data.get("fallback_api_key", "")
+    fallback_model = data.get("fallback_model", "")
 
     progress_mgr.init_task(task_id)
     asyncio.create_task(
-        run_translation(task_id, filepath, filename, provider, api_key, model, custom_url, custom_model)
+        run_translation(
+            task_id, filepath, filename, provider, api_key, model,
+            custom_url, custom_model, fallback_provider, fallback_api_key, fallback_model
+        )
     )
     return {"task_id": task_id, "status": "started"}
 
@@ -77,7 +83,8 @@ async def start_translation(request: Request):
 async def run_translation(
     task_id: str, filepath: str, filename: str,
     provider: str = "google", api_key: str = "", model: str = "",
-    custom_url: str = "", custom_model: str = ""
+    custom_url: str = "", custom_model: str = "",
+    fallback_provider: str = "", fallback_api_key: str = "", fallback_model: str = ""
 ):
     try:
         progress_mgr.update(task_id, "parsing", 0, "Parsing ebook structure...")
@@ -96,6 +103,7 @@ async def run_translation(
         total = len(chapters)
         translated_chapters = []
         ielts_stats = {"total": 0, "words": []}
+        used_fallback = False
 
         for i, ch in enumerate(chapters):
             pct = int((i / total) * 100)
@@ -104,11 +112,27 @@ async def run_translation(
                 f"[{provider_name}] Chapter {i+1}/{total}: {ch['title'][:35]}..."
             )
 
-            translated_text, found_ielts = await translate_chapter(
-                ch["text"], ielts_words,
-                provider_name=provider, api_key=api_key, model=model,
-                custom_url=custom_url, custom_model=custom_model
-            )
+            try:
+                translated_text, found_ielts = await translate_chapter(
+                    ch["text"], ielts_words,
+                    provider_name=provider, api_key=api_key, model=model,
+                    custom_url=custom_url, custom_model=custom_model
+                )
+            except Exception as e:
+                if fallback_provider and not used_fallback:
+                    fallback_prov = get_provider(fallback_provider)
+                    fallback_name = fallback_prov.display_name if fallback_prov else fallback_provider
+                    progress_mgr.update(
+                        task_id, "translating", pct,
+                        f"⚠️ {provider_name} failed, switching to {fallback_name}..."
+                    )
+                    used_fallback = True
+                    translated_text, found_ielts = await translate_chapter(
+                        ch["text"], ielts_words,
+                        provider_name=fallback_provider, api_key=fallback_api_key, model=fallback_model
+                    )
+                else:
+                    raise
 
             ielts_stats["total"] += len(found_ielts)
             ielts_stats["words"].extend(found_ielts)
@@ -125,6 +149,7 @@ async def run_translation(
 
         progress_mgr.update(task_id, "done", 100, "Complete!")
 
+        final_provider = f"{provider_name} → {fallback_name}" if used_fallback else provider_name
         stats = {
             "total_chapters": total,
             "total_ielts_words": ielts_stats["total"],
@@ -132,7 +157,8 @@ async def run_translation(
             "output_path": output_path,
             "output_filename": os.path.basename(output_path),
             "original_filename": filename,
-            "provider": provider_name,
+            "provider": final_provider,
+            "used_fallback": used_fallback,
             "timestamp": datetime.now().isoformat(),
             "ielts_words_sample": ielts_stats["words"][:30]
         }

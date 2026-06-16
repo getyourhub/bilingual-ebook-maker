@@ -2,6 +2,8 @@
     const $ = (sel) => document.querySelector(sel);
     const $$ = (sel) => document.querySelectorAll(sel);
 
+    const STORAGE_KEY = "ebook-maker-settings";
+
     const state = {
         taskId: null,
         filepath: null,
@@ -62,6 +64,32 @@
         openrouter: true, siliconflow: true, custom: true
     };
 
+    // Load saved settings
+    function loadSettings() {
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : {};
+        } catch { return {}; }
+    }
+
+    function saveSettings(settings) {
+        try {
+            const current = loadSettings();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({...current, ...settings}));
+        } catch (e) { console.error("Failed to save settings:", e); }
+    }
+
+    function getProviderSettings(provider) {
+        const settings = loadSettings();
+        return settings[`provider_${provider}`] || {};
+    }
+
+    function saveProviderSettings(provider, data) {
+        const settings = loadSettings();
+        settings[`provider_${provider}`] = data;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    }
+
     // Elements
     const dropZone = $('#drop-zone');
     const fileInput = $('#file-input');
@@ -77,6 +105,12 @@
     const startBtn = $('#start-btn');
     const downloadBtn = $('#download-btn');
     const restartBtn = $('#restart-btn');
+
+    // Load saved defaults
+    const savedSettings = loadSettings();
+    if (savedSettings.defaultProvider) {
+        state.provider = savedSettings.defaultProvider;
+    }
 
     // File upload
     ['dragenter', 'dragover'].forEach(e => {
@@ -127,6 +161,7 @@
             card.classList.add('active');
             state.provider = card.dataset.provider;
             updateProviderUI();
+            loadSavedProviderSettings();
         });
     });
 
@@ -136,7 +171,6 @@
         const models = PROVIDER_MODELS[p] || [];
         const isCustom = p === 'custom';
 
-        // Model select
         const modelRow = $('#model-row');
         const modelSelect = $('#model-select');
         const keyRow = $('#api-key-row');
@@ -152,14 +186,12 @@
             modelRow.classList.add('hidden');
         }
 
-        // API Key
         if (needsKey) {
             keyRow.classList.remove('hidden');
         } else {
             keyRow.classList.add('hidden');
         }
 
-        // Custom URL/Model
         if (isCustom) {
             customUrlRow.classList.remove('hidden');
             customModelRow.classList.remove('hidden');
@@ -170,11 +202,66 @@
         }
     }
 
+    function loadSavedProviderSettings() {
+        const p = state.provider;
+        const saved = getProviderSettings(p);
+
+        if (saved.apiKey) $('#api-key').value = saved.apiKey;
+        if (saved.model) $('#model-select').value = saved.model;
+        if (saved.customUrl) $('#custom-url').value = saved.customUrl;
+        if (saved.customModel) $('#custom-model').value = saved.customModel;
+    }
+
+    // Save provider settings
+    $('#save-provider-btn').addEventListener('click', () => {
+        const p = state.provider;
+        const data = {
+            apiKey: $('#api-key').value,
+            model: $('#model-select').value,
+            customUrl: $('#custom-url').value,
+            customModel: $('#custom-model').value
+        };
+        saveProviderSettings(p, data);
+
+        const feedback = $('#save-feedback');
+        feedback.classList.remove('hidden');
+        setTimeout(() => feedback.classList.add('hidden'), 2000);
+    });
+
     // Toggle key visibility
     $('#toggle-key').addEventListener('click', () => {
         const input = $('#api-key');
         input.type = input.type === 'password' ? 'text' : 'password';
     });
+
+    // Save defaults
+    $('#save-defaults-btn').addEventListener('click', () => {
+        const defaultProvider = $('#default-provider').value;
+        const fallbackProvider = $('#fallback-provider').value;
+        saveSettings({ defaultProvider, fallbackProvider });
+
+        const feedback = $('#defaults-feedback');
+        feedback.classList.remove('hidden');
+        setTimeout(() => feedback.classList.add('hidden'), 2000);
+    });
+
+    // Load saved defaults on init
+    function loadDefaults() {
+        const settings = loadSettings();
+        if (settings.defaultProvider) {
+            $('#default-provider').value = settings.defaultProvider;
+            state.provider = settings.defaultProvider;
+            // Update active card
+            $$('.provider-card').forEach(c => {
+                c.classList.toggle('active', c.dataset.provider === settings.defaultProvider);
+            });
+        }
+        if (settings.fallbackProvider) {
+            $('#fallback-provider').value = settings.fallbackProvider;
+        }
+        updateProviderUI();
+        loadSavedProviderSettings();
+    }
 
     // Start translation
     startBtn.addEventListener('click', async () => {
@@ -196,6 +283,9 @@
         startBtn.classList.add('loading');
         startBtn.querySelector('.btn-text').textContent = 'Starting... / 启动中...';
 
+        const settings = loadSettings();
+        const fallbackProvider = settings.fallbackProvider || "";
+
         try {
             const res = await fetch('/api/translate', {
                 method: 'POST',
@@ -208,7 +298,10 @@
                     api_key: apiKey,
                     model: model,
                     custom_url: customUrl,
-                    custom_model: customModel
+                    custom_model: customModel,
+                    fallback_provider: fallbackProvider,
+                    fallback_api_key: getProviderSettings(fallbackProvider).apiKey || "",
+                    fallback_model: getProviderSettings(fallbackProvider).model || ""
                 })
             });
             const data = await res.json();
@@ -343,5 +436,6 @@
     svg.prepend(defs);
     $('#progress-circle').setAttribute('stroke', 'url(#progressGradient)');
 
-    updateProviderUI();
+    // Init
+    loadDefaults();
 })();

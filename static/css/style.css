@@ -873,3 +873,31 @@ footer p + p { margin-top: 0.3rem; }
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* Save Button */
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.save-feedback {
+    color: var(--success);
+    font-size: 0.85rem;
+    margin-top: 0.3rem;
+    animation: fadeInOut 2s ease;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Default Config */
+.default-config {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}

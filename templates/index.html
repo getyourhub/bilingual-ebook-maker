@@ -148,6 +148,51 @@
                         <button class="btn-icon-sm" id="toggle-key" title="Show/Hide">👁</button>
                     </div>
                 </div>
+                <button class="btn btn-outline btn-sm" id="save-provider-btn">
+                    <span>💾 Save Settings / 保存设置</span>
+                </button>
+                <div class="save-feedback hidden" id="save-feedback">✓ Saved / 已保存</div>
+            </div>
+
+            <!-- Default & Fallback -->
+            <div class="default-config">
+                <div class="config-row">
+                    <label>⭐ Default Engine / 默认引擎</label>
+                    <select id="default-provider">
+                        <option value="google">Google Translate</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="claude">Anthropic Claude</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="qwen">Qwen (通义千问)</option>
+                        <option value="mimo">MiMo (小米)</option>
+                        <option value="mimo_tokenplan">MiMo Token Plan</option>
+                        <option value="deepl">DeepL</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="siliconflow">SiliconFlow</option>
+                        <option value="custom">Custom (自定义)</option>
+                    </select>
+                </div>
+                <div class="config-row">
+                    <label>🔄 Fallback Engine / 备用引擎（出错时自动切换）</label>
+                    <select id="fallback-provider">
+                        <option value="">None / 不启用</option>
+                        <option value="google">Google Translate</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="claude">Anthropic Claude</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="qwen">Qwen (通义千问)</option>
+                        <option value="mimo">MiMo (小米)</option>
+                        <option value="mimo_tokenplan">MiMo Token Plan</option>
+                        <option value="deepl">DeepL</option>
+                        <option value="openrouter">OpenRouter</option>
+                        <option value="siliconflow">SiliconFlow</option>
+                        <option value="custom">Custom (自定义)</option>
+                    </select>
+                </div>
+                <button class="btn btn-outline btn-sm" id="save-defaults-btn">
+                    <span>💾 Save Defaults / 保存默认设置</span>
+                </button>
+                <div class="save-feedback hidden" id="defaults-feedback">✓ Saved / 已保存</div>
             </div>
 
             <div class="translate-action">
