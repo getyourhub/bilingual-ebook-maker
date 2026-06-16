@@ -3,12 +3,11 @@ FROM python:3.11-slim
 LABEL maintainer="Bilingual Ebook Maker"
 LABEL description="Translate ebooks and create bilingual EPUB with IELTS vocabulary highlights"
 
-# Install system dependencies including Calibre for ebook conversion
 RUN apt-get update && apt-get install -y --no-install-recommends \
     calibre \
-    wget \
     curl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 WORKDIR /app
 
@@ -17,10 +16,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Create directories for uploads and outputs
 RUN mkdir -p /app/uploads /app/outputs
 
-# Set environment variables
 ENV UPLOAD_DIR=/app/uploads
 ENV OUTPUT_DIR=/app/outputs
 ENV PYTHONUNBUFFERED=1
