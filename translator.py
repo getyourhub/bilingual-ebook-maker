@@ -237,8 +237,8 @@ def _register_providers():
     )
 
     PROVIDERS["mimo_tokenplan"] = OpenAICompatibleProvider(
-        name="mimo_tokenplan", display_name="MiMo Token Plan (小米积分)",
-        base_url="https://api.xiaomimimo.com/v1",
+        name="mimo_tokenplan", display_name="MiMo Token Plan (小米订阅)",
+        base_url="https://token-plan-cn.xiaomimimo.com/v1",
         default_model="mimo-v2.5-pro",
         models=[
             {"id": "mimo-v2.5-pro", "name": "MiMo V2.5 Pro"},
